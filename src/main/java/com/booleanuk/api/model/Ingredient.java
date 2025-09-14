@@ -1,6 +1,7 @@
 package com.booleanuk.api.model;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonIncludeProperties;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -21,6 +22,7 @@ public class Ingredient {
 
     @ManyToOne
     @JoinColumn(name="recipe_id", nullable=false)
+    @JsonIncludeProperties({"id", "title"})
     private Recipe recipe;
 
 

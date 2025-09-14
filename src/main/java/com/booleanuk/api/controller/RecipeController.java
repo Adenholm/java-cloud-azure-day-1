@@ -4,7 +4,6 @@ import com.booleanuk.api.model.Category;
 import com.booleanuk.api.model.Ingredient;
 import com.booleanuk.api.model.Recipe;
 import com.booleanuk.api.repository.CategoryRepository;
-import com.booleanuk.api.repository.IngredientRepository;
 import com.booleanuk.api.repository.RecipeRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -18,14 +17,11 @@ import java.util.List;
 public class RecipeController {
     private final RecipeRepository recipeRepository;
     private final CategoryRepository categoryRepository;
-    private final IngredientRepository ingredientRepository;
 
     public RecipeController(RecipeRepository recipeRepository,
-                            CategoryRepository categoryRepository,
-                            IngredientRepository ingredientRepository) {
+                            CategoryRepository categoryRepository) {
         this.recipeRepository = recipeRepository;
         this.categoryRepository = categoryRepository;
-        this.ingredientRepository = ingredientRepository;
     }
 
     @GetMapping
@@ -68,30 +64,31 @@ public class RecipeController {
         recipe.setServings(request.servings());
         recipe.setCategory(category);
 
-        Recipe savedRecipe = this.recipeRepository.save(recipe);
-
         List<Ingredient> ingredients = request.ingredients().stream()
                 .map(name -> {
                     Ingredient ingredient = new Ingredient();
                     ingredient.setIngredient(name);
-                    ingredient.setRecipe(savedRecipe);
-                    return ingredientRepository.save(ingredient);
+                    ingredient.setRecipe(recipe);
+                    return ingredient;
                 })
                 .toList();
 
-        savedRecipe.setIngredients(ingredients);
+        recipe.setIngredients(ingredients);
 
-        return new ResponseEntity<>(this.recipeRepository.save(savedRecipe), HttpStatus.CREATED);
+        Recipe savedRecipe = recipeRepository.save(recipe);
+
+        return new ResponseEntity<>(savedRecipe, HttpStatus.CREATED);
     }
 
     @PutMapping("{id}")
-    public ResponseEntity<Recipe> update(@PathVariable int id, @RequestBody RecipeRequest request) {
-        Recipe recipeToUpdate = this.recipeRepository.findById(id)
+    public ResponseEntity<Recipe> updateRecipe(@PathVariable int id, @RequestBody RecipeRequest request) {
+        Recipe recipeToUpdate = recipeRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find recipe with that id."));
 
         Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Could not find category with that id."));
 
+        // update fields
         recipeToUpdate.setTitle(request.title());
         recipeToUpdate.setDescription(request.description());
         recipeToUpdate.setImageUrl(request.imageUrl());
@@ -101,23 +98,24 @@ public class RecipeController {
         recipeToUpdate.setServings(request.servings());
         recipeToUpdate.setCategory(category);
 
-        // clear old ingredients
-        ingredientRepository.deleteAll(recipeToUpdate.getIngredients());
+        recipeToUpdate.getIngredients().clear();
 
-        // add new ingredients
-        List<Ingredient> ingredients = request.ingredients().stream()
+        List<Ingredient> newIngredients = request.ingredients().stream()
                 .map(name -> {
                     Ingredient ingredient = new Ingredient();
                     ingredient.setIngredient(name);
                     ingredient.setRecipe(recipeToUpdate);
-                    return ingredientRepository.save(ingredient);
+                    return ingredient;
                 })
                 .toList();
 
-        recipeToUpdate.setIngredients(ingredients);
+        recipeToUpdate.getIngredients().addAll(newIngredients);
 
-        return ResponseEntity.ok(this.recipeRepository.save(recipeToUpdate));
+        Recipe updatedRecipe = recipeRepository.save(recipeToUpdate);
+
+        return new ResponseEntity<>(updatedRecipe, HttpStatus.OK);
     }
+
 
     @DeleteMapping("{id}")
     public ResponseEntity<Recipe> delete(@PathVariable int id) {

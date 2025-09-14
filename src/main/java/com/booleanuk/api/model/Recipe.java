@@ -27,8 +27,8 @@ public class Recipe {
     private String imageUrl;
 
     @Column
-    @OneToMany(mappedBy = "recipe", cascade = CascadeType.REMOVE)
-    @JsonIgnoreProperties({"recipe"})
+    @OneToMany(mappedBy = "recipe", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonIncludeProperties({"ingredient"})
     private List<Ingredient> ingredients;
 
     @Column
@@ -44,7 +44,7 @@ public class Recipe {
     private int servings;
 
     @ManyToOne
-    @JoinColumn(name = "category_id", nullable = false)
+    @JoinColumn(name = "category_id", nullable = true)
     @JsonIncludeProperties({"id", "name"})
     private Category category;
 
